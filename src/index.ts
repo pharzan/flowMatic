@@ -5,7 +5,13 @@ import { Bot } from './flowmatic/processor'
 
 
 
-const helloWorld = () => { }
+const helloWorld = (actionParams: any, userInput: any) => { console.log("Hello World!") 
+
+return {
+    userInput,
+    actionResponse:true
+}
+}
 
 const bot = new Bot([{
     id: 'Bot',
@@ -22,21 +28,17 @@ const port: number = 3001;
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
-app.post('/', (req: Request, res: Response) => {
-    const { incoming, userToken } = req.body;
+app.post('/main', (req: Request, res: Response) => {
+    const { messageBody, userToken } = req.body;
     const incomingMessage = {
         userToken,
-        incoming
+        messageBody
     }
     bot.receiveMessage(incomingMessage)
 
-    return res.send({});
+    return res.send({ response: true });
 });
 
-app.post('/main', (req: Request, res: Response) => {
-
-    return res.send({});
-});
 
 app.listen(port, () => {
     console.log(`Server listening at port: ${port}`);

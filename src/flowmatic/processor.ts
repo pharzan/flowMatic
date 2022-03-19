@@ -1,3 +1,13 @@
+const cache = require('../utils/cache')
+const deepSearch = require('../utils/deep-search')
+
+
+interface ActionResponseObject {
+    incoming: Incoming;
+    actionParams: any;
+    actionResponse: boolean;
+}
+
 interface NextSteps { targetId: string, condition?: any }
 
 interface Step {
@@ -13,26 +23,82 @@ interface IncomingBody {
 };
 interface Incoming {
     userToken: string;
-    incoming: IncomingBody
+    messageBody: IncomingBody
     used?: boolean;
 }
 
 class Bot {
-    userFlow: Step[];
+    flow: Step[];
 
-    constructor(userFlow: Step[]) {
-        this.userFlow = userFlow;
+    constructor(flow: Step[]) {
+        this.flow = flow;
     }
 
-    receiveMessage = async (message: Incoming) => {
-        const { userToken } = message
+    run: any = async (step: Step, incoming: Incoming) => {
+        const { userToken, messageBody, used } = incoming;
+
+        let result: ActionResponseObject = {
+            incoming,
+            actionParams: step.actionParams,
+            actionResponse: false, // status of action function
+        }
+
+        if(!step) throw Error('Step not provided');
+        console.log(step.action)
+        for (const aksyon of step.action) {
+            result = await aksyon(step.actionParams, incoming)
+            if (result.actionParams) step.actionParams = result.actionParams
+        }
+
+        await this.setUserStep(userToken, step.id, true)
+
+        if (used) return
+
+
+
+    }
+
+    receiveMessage = async (incoming: Incoming) => {
+        const { userToken } = incoming
         try {
-            console.log(userToken)
+
+            const userStepName = await this.getUserStepId(userToken)
+            console.log(userStepName)
+            if (userStepName) {
+                const step = await this.findUserStepById(userStepName)
+                if (step) return this.run(step, incoming)
+            }
+
+
+            this.run(this.flow[0], incoming)
+
+
 
         } catch (e) {
             console.log("CATCH::", e)
             throw new Error('There was an error receiving the message')
         }
+    }
+
+    findUserStepById = async (userStepId: string) => {
+        const found = await deepSearch(this.flow, 'id', userStepId)
+        if (found.length) {
+            return found[0]
+        }
+    }
+
+    setUserStep = (id: string, step: string, didExecute: boolean): void => {
+        cache.set(id, JSON.stringify({ id: step, didExecute }))
+    }
+
+    getNextStepById = (steps: Step[], id: string): (Step | null) => {
+        return steps.find(step => step?.id === id) || null
+    }
+
+    getUserStepId = async (userId: string): Promise<(string | null)> => {
+        const result = await cache.get(userId)
+        if (result) return JSON.parse(result).id
+        return null
     }
 }
 

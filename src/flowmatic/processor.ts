@@ -44,7 +44,7 @@ class Bot {
         }
 
         if(!step) throw Error('Step not provided');
-        console.log(step.action)
+        console.log(step)
         for (const aksyon of step.action) {
             result = await aksyon(step.actionParams, incoming)
             if (result.actionParams) step.actionParams = result.actionParams
@@ -53,7 +53,22 @@ class Bot {
         await this.setUserStep(userToken, step.id, true)
 
         if (used) return
+        if (result.actionResponse) {
+            for (const target of step.next) {
+                const nextstep = this.getNextStepById(this.flow, target.targetId)
+                if (target.condition) {
+                    if (target.condition === result.userInput.incoming.body) {
+                        userInput.used = true
+                        await this.setUserStep(from, target.targetId, false)
+                        return await this.run(nextstep, userInput)
+                    }
+                } else {
+                    await this.setUserStep(from, target.targetId, false)
+                    return await this.run(nextstep, userInput)
+                }
 
+            }
+        }
 
 
     }

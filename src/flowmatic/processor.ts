@@ -57,20 +57,17 @@ class Bot {
             for (const target of step.next) {
                 const nextstep = this.getNextStepById(this.flow, target.targetId)
                 if (target.condition) {
-                    if (target.condition === result.userInput.incoming.body) {
-                        userInput.used = true
-                        await this.setUserStep(from, target.targetId, false)
-                        return await this.run(nextstep, userInput)
+                    if (target.condition === result.incoming) {
+                        incoming.used = true
+                        await this.setUserStep(userToken, target.targetId, false)
+                        return await this.run(nextstep, incoming)
                     }
                 } else {
-                    await this.setUserStep(from, target.targetId, false)
-                    return await this.run(nextstep, userInput)
+                    await this.setUserStep(userToken, target.targetId, false)
+                    return await this.run(nextstep, incoming)
                 }
-
             }
         }
-
-
     }
 
     receiveMessage = async (incoming: Incoming) => {
@@ -84,10 +81,7 @@ class Bot {
                 if (step) return this.run(step, incoming)
             }
 
-
             this.run(this.flow[0], incoming)
-
-
 
         } catch (e) {
             console.log("CATCH::", e)
